@@ -1,9 +1,6 @@
 
-
 "use client";
 import React, { useState, useRef, useEffect } from "react";
-
-const TEST_TEXT = "The quick brown fox jumps over the lazy dog.";
 
 function calculateWPM(charsTyped: number, elapsedSeconds: number) {
   if (elapsedSeconds === 0) return 0;
@@ -12,36 +9,71 @@ function calculateWPM(charsTyped: number, elapsedSeconds: number) {
 }
 
 export default function TypingSpeedCounter() {
+  const [sentences, setSentences] = useState<string[] | null>(null);
+  const [testText, setTestText] = useState<string>("");
   const [userInput, setUserInput] = useState("");
   const [startTime, setStartTime] = useState<number | null>(null);
   const [endTime, setEndTime] = useState<number | null>(null);
   const [isFinished, setIsFinished] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Fetch sentences.json and pick a random sentence
   useEffect(() => {
+    async function fetchSentences() {
+      try {
+        const res = await fetch("/sentences.json");
+        const data = await res.json();
+        setSentences(data);
+        // Pick a random sentence
+        const randomSentence = data[Math.floor(Math.random() * data.length)];
+        setTestText(randomSentence);
+      } catch (e) {
+        setTestText("Failed to load sentence.");
+      }
+    }
+    fetchSentences();
+  }, []);
+
+  // Reset input and timers when testText changes (i.e., on restart)
+  useEffect(() => {
+    setUserInput("");
+    setStartTime(null);
+    setEndTime(null);
+    setIsFinished(false);
+    if (inputRef.current) inputRef.current.value = "";
+  }, [testText]);
+
+  useEffect(() => {
+    if (!testText) return;
     if (userInput.length === 1 && !startTime) {
       setStartTime(Date.now());
     }
-    if (userInput === TEST_TEXT) {
+    if (userInput === testText) {
       if (!endTime) {
         setEndTime(Date.now());
         setIsFinished(true);
       }
     }
-  }, [userInput, startTime, endTime]);
+  }, [userInput, startTime, endTime, testText]);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (isFinished) return;
     const value = e.target.value;
-    if (value.length > TEST_TEXT.length) return;
+    if (testText && value.length > testText.length) return;
     setUserInput(value);
   }
 
   function handleRestart() {
-    setUserInput("");
-    setStartTime(null);
-    setEndTime(null);
-    setIsFinished(false);
+    if (sentences && sentences.length > 0) {
+      const randomSentence = sentences[Math.floor(Math.random() * sentences.length)];
+      setTestText(randomSentence);
+    } else {
+      // fallback: just reset input
+      setUserInput("");
+      setStartTime(null);
+      setEndTime(null);
+      setIsFinished(false);
+    }
     inputRef.current?.focus();
   }
 
@@ -52,26 +84,28 @@ export default function TypingSpeedCounter() {
     elapsedSeconds = (Date.now() - startTime) / 1000;
   }
 
-  const wpm = calculateWPM(userInput.length, elapsedSeconds);
+  // Only calculate WPM at the end
+  const wpm = isFinished
+    ? calculateWPM(userInput.length, elapsedSeconds)
+    : null;
 
   return (
     <div className="max-w-xl mx-auto mt-10 p-6 border rounded shadow">
       <h2 className="text-xl font-bold mb-4">Typing Test</h2>
-      <p className="mb-4 font-mono bg-gray-100 p-2 rounded">{TEST_TEXT}</p>
+      <p className="mb-4 font-mono bg-gray-100 p-2 rounded min-h-[3rem]">
+        {testText || "Loading..."}
+      </p>
       <input
         ref={inputRef}
         type="text"
         className="w-full p-2 border rounded font-mono mb-4"
         value={userInput}
         onChange={handleChange}
-        disabled={isFinished}
+        disabled={isFinished || !testText || testText === "Failed to load sentence."}
         placeholder="Start typing here..."
         autoFocus
       />
-      <div className="mb-2">
-        <span className="font-semibold">WPM: </span>
-        <span>{wpm}</span>
-      </div>
+      {/* Only show WPM at the end */}
       {isFinished && (
         <div className="mt-4">
           <div className="text-green-600 font-bold mb-2">
