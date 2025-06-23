@@ -170,10 +170,44 @@ export default function TypingSpeedCounter() {
   // Show up to 5 previous results (most recent first)
   const recentResults = [...globalResults].reverse().slice(0, 5);
 
+  // --- Highlight logic for testText ---
+  function renderTestTextWithHighlights() {
+    if (!testText) return "Loading...";
+    const chars = testText.split("");
+    const inputChars = userInput.split("");
+    return (
+      <span>
+        {chars.map((char, idx) => {
+          let className = "";
+          if (idx < inputChars.length) {
+            if (inputChars[idx] === char) {
+              className = "bg-transparent";
+            } else {
+              className = "bg-red-300 text-black";
+            }
+          }
+          return (
+            <span
+              key={idx}
+              className={className + "  "}
+              style={
+                className
+                  ? { transition: "background 0.1s" }
+                  : undefined
+              }
+            >
+              {char}
+            </span>
+          );
+        })}
+      </span>
+    );
+  }
+
   return (
     <div className="max-w-xl mx-auto">
 
-      <div className="w-full mt-10 p-6 border rounded shadow">
+      <div className="w-full mt-10 p-6 border rounded">
         <h2 className="text-xl font-bold mb-4">Typing Test</h2>
         <div className="flex items-center justify-between mb-2">
           <span className="text-gray-700 font-mono">
@@ -184,7 +218,7 @@ export default function TypingSpeedCounter() {
           </span>
         </div>
         <p className="mb-4 font-mono border bg-gray-100 p-2 rounded min-h-[3rem]">
-          {testText || "Loading..."}
+          {renderTestTextWithHighlights()}
         </p>
         {/* Previous Results Box */}
 
@@ -215,7 +249,7 @@ export default function TypingSpeedCounter() {
         )}
       </div>
 
-      <div className="w-full mt-6 p-6 border rounded shadow">
+      <div className="w-full mt-6 p-6 border rounded ">
         <h2 className="text-xl font-bold mb-4">Previous Results</h2>
         {recentResults.length === 0 ? (
           <div className="text-gray-500 text-sm">No previous results yet.</div>
