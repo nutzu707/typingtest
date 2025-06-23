@@ -3,17 +3,9 @@
 import React, { useState, useRef, useEffect } from "react";
 
 const APOSTROPHE_EQUIVALENTS = [
-  "'", // ASCII apostrophe
-  "’", // U+2019 RIGHT SINGLE QUOTATION MARK
-  "‘", // U+2018 LEFT SINGLE QUOTATION MARK
-  "‛", // U+201B SINGLE HIGH-REVERSED-9 QUOTATION MARK
-  "ʼ", // U+02BC MODIFIER LETTER APOSTROPHE
-  "`", // grave accent (sometimes used)
-  "ʹ", // U+02B9 MODIFIER LETTER PRIME
-  "＇", // U+FF07 FULLWIDTH APOSTROPHE
+  "'", "’", "‘", "‛", "ʼ", "`", "ʹ", "＇",
 ];
 
-// Helper to check if two chars are equivalent, especially for apostrophes
 function charsEquivalent(a: string, b: string) {
   if (a === b) return true;
   if (
@@ -25,7 +17,6 @@ function charsEquivalent(a: string, b: string) {
   return false;
 }
 
-// Helper to normalize a string by replacing all apostrophe-like chars with ASCII apostrophe
 function normalizeApostrophes(str: string) {
   let result = "";
   for (const c of str) {
@@ -40,7 +31,6 @@ function normalizeApostrophes(str: string) {
 
 function calculateWPM(charsTyped: number, elapsedSeconds: number) {
   if (elapsedSeconds === 0) return 0;
-  // 1 word = 5 chars
   return Math.round((charsTyped / 5) / (elapsedSeconds / 60));
 }
 
@@ -55,7 +45,6 @@ function getGlobalResults() {
   }
 }
 
-// Only store wpm and date (not time)
 function saveGlobalResult(result: { wpm: number; date: string }) {
   if (typeof window === "undefined") return;
   try {
@@ -65,37 +54,23 @@ function saveGlobalResult(result: { wpm: number; date: string }) {
   } catch {}
 }
 
-// Helper to format "time ago" string
 function timeAgo(dateString: string): string {
   const now = new Date();
   const then = new Date(dateString);
   const seconds = Math.floor((now.getTime() - then.getTime()) / 1000);
 
   if (isNaN(seconds) || seconds < 0) return "just now";
-
-  if (seconds < 60) {
-    return `${seconds} second${seconds === 1 ? "" : "s"} ago`;
-  }
+  if (seconds < 60) return `${seconds} second${seconds === 1 ? "" : "s"} ago`;
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) {
-    return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
-  }
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) {
-    return `${hours} hour${hours === 1 ? "" : "s"} ago`;
-  }
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
   const days = Math.floor(hours / 24);
-  if (days < 7) {
-    return `${days} day${days === 1 ? "" : "s"} ago`;
-  }
+  if (days < 7) return `${days} day${days === 1 ? "" : "s"} ago`;
   const weeks = Math.floor(days / 7);
-  if (weeks < 4) {
-    return `${weeks} week${weeks === 1 ? "" : "s"} ago`;
-  }
+  if (weeks < 4) return `${weeks} week${weeks === 1 ? "" : "s"} ago`;
   const months = Math.floor(days / 30);
-  if (months < 12) {
-    return `${months} month${months === 1 ? "" : "s"} ago`;
-  }
+  if (months < 12) return `${months} month${months === 1 ? "" : "s"} ago`;
   const years = Math.floor(days / 365);
   return `${years} year${years === 1 ? "" : "s"} ago`;
 }
@@ -116,6 +91,7 @@ export default function TypingSpeedCounter() {
     { wpm: number; date: string }[]
   >([]);
   const [showAllResults, setShowAllResults] = useState(false);
+  const [animateWPM, setAnimateWPM] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Timer effect: updates every 100ms while typing
@@ -144,10 +120,9 @@ export default function TypingSpeedCounter() {
         const res = await fetch("/sentences.json");
         const data = await res.json();
         setSentences(data);
-        // Pick a random sentence
         const randomSentence = data[Math.floor(Math.random() * data.length)];
         setTestText(randomSentence);
-        //eslint-disable-next-line
+        // eslint-disable-next-line
       } catch (e) {
         setTestText("Failed to load sentence.");
       }
@@ -177,7 +152,6 @@ export default function TypingSpeedCounter() {
       setStartTime(now);
       setTimer(0);
     }
-    // Use normalized strings for completion check
     if (
       normalizeApostrophes(userInput) === normalizeApostrophes(testText)
     ) {
@@ -185,6 +159,10 @@ export default function TypingSpeedCounter() {
         const finishedTime = Date.now();
         setEndTime(finishedTime);
         setIsFinished(true);
+
+        // Animate WPM on finish
+        setAnimateWPM(true);
+        setTimeout(() => setAnimateWPM(false), 1200);
 
         // Calculate WPM and save result
         const elapsed = (finishedTime - (startTime ?? finishedTime)) / 1000;
@@ -213,7 +191,6 @@ export default function TypingSpeedCounter() {
       const randomSentence = sentences[Math.floor(Math.random() * sentences.length)];
       setTestText(randomSentence);
     } else {
-      // fallback: just reset input
       setUserInput("");
       setStartTime(null);
       setEndTime(null);
@@ -223,7 +200,6 @@ export default function TypingSpeedCounter() {
     inputRef.current?.focus();
   }
 
-  // Prevent pasting into the textarea
   function handlePaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
     e.preventDefault();
   }
@@ -235,19 +211,16 @@ export default function TypingSpeedCounter() {
     elapsedSeconds = (Date.now() - startTime) / 1000;
   }
 
-  // Only calculate WPM at the end
   const wpm = isFinished
     ? calculateWPM(userInput.length, elapsedSeconds)
     : null;
 
-  // Calculate global average WPM
   const globalWPMs = globalResults.map((r) => r.wpm);
   const globalAvgWPM =
     globalWPMs.length > 0
       ? Math.round(globalWPMs.reduce((a, b) => a + b, 0) / globalWPMs.length)
       : null;
 
-  // Show up to 5 previous results (most recent first) unless showAllResults is true
   const reversedResults = [...globalResults].reverse();
   const recentResults = showAllResults ? reversedResults : reversedResults.slice(0, 5);
 
@@ -260,52 +233,88 @@ export default function TypingSpeedCounter() {
       <span>
         {chars.map((char, idx) => {
           let className = "";
+          let style: React.CSSProperties = {};
           if (idx < inputChars.length) {
             if (charsEquivalent(inputChars[idx], char)) {
               className = "bg-transparent";
+              style = {
+                transition: "background 0.1s, color 0.1s",
+              };
             } else {
-              className = "bg-red-300 text-black";
+              className = "bg-red-300 text-black animate-shake";
+              style = {
+                transition: "background 0.1s, color 0.1s",
+                animation: "shake 0.2s",
+              };
             }
+          }
+          // Animate the next char to type (remove blue color)
+          if (idx === inputChars.length && !isFinished) {
+            className += " animate-blink";
+            style = {
+              ...style,
+              transition: "color 0.2s",
+              animation: "blink 1s step-end infinite",
+            };
           }
           return (
             <span
               key={idx}
-              className={className + "  "}
-              style={
-                className
-                  ? { transition: "background 0.1s" }
-                  : undefined
-              }
+              className={className }
+              style={style}
             >
               {char}
             </span>
           );
         })}
+        <style jsx>{`
+          @keyframes shake {
+            0% { transform: translateX(0); }
+            20% { transform: translateX(-2px); }
+            40% { transform: translateX(2px); }
+            60% { transform: translateX(-2px); }
+            80% { transform: translateX(2px); }
+            100% { transform: translateX(0); }
+          }
+          @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.2; }
+          }
+        `}</style>
       </span>
     );
   }
 
-  return (
-    <div className="max-w-xl mx-auto pt-10 pb-10">
+  const showRestartDuringTyping = startTime !== null && !isFinished;
 
-      <div className="w-full p-6 border rounded">
-        <h2 className="text-xl font-bold mb-4">Typing Test</h2>
+  // Determine if currently typing (timer running)
+  const isTyping = startTime !== null && !isFinished;
+
+  return (
+    <div className="max-w-xl mx-auto pb-10 font-mono">
+      <div className="w-full p-6 border rounded shadow-lg bg-white/80 transition-all duration-300 hover:shadow-2xl">
+        <h2 className="text-4xl font-bold mb-8 text-center tracking-tight transition-all duration-300 hover:text-blue-700">
+          Typing Test
+        </h2>
         <div className="flex items-center justify-between mb-2">
-          <span className="text-gray-700 font-mono">
+          <span className="font-mono font-bold flex items-center gap-2">
+            <span
+              className={`inline-block w-2 h-2 rounded-full animate-pulse ${
+                isTyping ? "bg-green-500" : "bg-red-500"
+              }`}
+            ></span>
             Timer:{" "}
-            <span className="font-bold">
+            <span className="font-bold text-blue-700 transition-all duration-300">
               {timer.toFixed(1)}s
             </span>
           </span>
         </div>
-        <p className="mb-4 font-mono border bg-gray-100 p-2 rounded min-h-[3rem]">
+        <p className="mb-4 font-mono border bg-gray-100 p-2 rounded min-h-[3rem] transition-all duration-300 shadow-inner">
           {renderTestTextWithHighlights()}
         </p>
-        {/* Previous Results Box */}
-
         <textarea
           ref={inputRef}
-          className="w-full p-2 border rounded font-mono mb-2 resize-none break-words"
+          className="w-full p-2 border rounded font-mono mb-2 resize-none break-words transition-all duration-200"
           value={userInput}
           onChange={handleChange}
           onPaste={handlePaste}
@@ -315,31 +324,74 @@ export default function TypingSpeedCounter() {
           rows={3}
           style={{ wordBreak: "break-word", overflowWrap: "break-word" }}
         />
-        {/* Only show WPM at the end */}
-        {isFinished && (
-          <div className="">
-            <div className="font-bold mb-2">
-              Finished! Your WPM: {wpm}
-            </div>
+        {showRestartDuringTyping && (
+          <div className="mb-2 flex justify-end">
             <button
-              className="px-4 py-2 bg-black cursor-pointer text-white rounded"
+              className="px-4 py-2 bg-black cursor-pointer text-white rounded shadow transition-all duration-200 hover:bg-blue-700 hover:scale-105 active:scale-95"
               onClick={handleRestart}
             >
               Restart
             </button>
           </div>
         )}
+        {isFinished && (
+          <div className="flex flex-col items-center animate-fadein">
+            <div
+              className={
+                "font-bold mb-2 text-2xl transition-all duration-500 " +
+                (animateWPM ? "animate-pop" : "")
+              }
+            >
+              Finished! Your WPM:{" "}
+              <span className="text-blue-700">{wpm}</span>
+            </div>
+            <button
+              className="px-4 py-2 bg-black cursor-pointer text-white rounded shadow transition-all duration-200 hover:bg-blue-700 hover:scale-105 active:scale-95"
+              onClick={handleRestart}
+            >
+              Restart
+            </button>
+            <style jsx>{`
+              @keyframes pop {
+                0% { transform: scale(1); }
+                60% { transform: scale(1.25); }
+                100% { transform: scale(1); }
+              }
+              .animate-pop {
+                animation: pop 0.2s cubic-bezier(.36,1.6,.64,1) 1;
+              }
+              @keyframes fadein {
+                from { opacity: 0; }
+                to { opacity: 1; }
+              }
+              .animate-fadein {
+                animation: fadein 0.7s;
+              }
+            `}</style>
+          </div>
+        )}
       </div>
 
-      <div className="w-full mt-6 p-6 border rounded ">
-        <h2 className="text-xl font-bold mb-4">Previous Results</h2>
+      <div className="w-full mt-6 p-6 border rounded shadow bg-white/70 transition-all duration-300 hover:shadow-xl">
+        <div className="font-mono font-bold text-xl text-center mb-4">
+            Global average:{" "}
+            {globalAvgWPM !== null ? (
+                <span className="font-bold text-blue-700 animate-fadein">{globalAvgWPM} WPM</span>
+            ) : (
+                <span className="text-gray-500">N/A</span>
+            )}
+        </div>
+        <h2 className=" font-bold mb-2 tracking-tight px-2">Previous Results</h2>
         {recentResults.length === 0 ? (
-          <div className="text-gray-500 text-sm">No previous results yet.</div>
+          <div className="text-gray-500 text-sm px-2">No previous results yet.</div>
         ) : (
           <>
-            <ul className="text-sm font-mono space-y-1 mb-2">
+            <ul className="text-sm font-mono space-y-1 ">
               {recentResults.map((r, idx) => (
-                <li key={r.date + idx}>
+                <li
+                  key={r.date + idx}
+                  className="transition-all duration-200 hover:bg-blue-50 px-2 py-1"
+                >
                   <span className="font-bold">{r.wpm} WPM</span>
                   {" "}
                   <span className="text-gray-600">
@@ -350,7 +402,7 @@ export default function TypingSpeedCounter() {
             </ul>
             {globalResults.length > 5 && !showAllResults && (
               <button
-                className="text-sm underline cursor-pointer"
+                className="text-sm underline cursor-pointer px-2 pt-2 text-blue-700 hover:text-blue-900 transition-all duration-200"
                 onClick={() => setShowAllResults(true)}
               >
                 show more
@@ -358,7 +410,7 @@ export default function TypingSpeedCounter() {
             )}
             {showAllResults && globalResults.length > 5 && (
               <button
-                className="text-sm underline cursor-pointer"
+                className="text-sm underline cursor-pointer px-2 pt-2 text-blue-700 hover:text-blue-900 transition-all duration-200"
                 onClick={() => setShowAllResults(false)}
               >
                 show less
@@ -366,14 +418,16 @@ export default function TypingSpeedCounter() {
             )}
           </>
         )}
-        <div className="mt-2 font-mono">
-          Global average:{" "}
-          {globalAvgWPM !== null ? (
-            <span className="font-bold">{globalAvgWPM} WPM</span>
-          ) : (
-            <span className="text-gray-500">N/A</span>
-          )}
-        </div>
+        
+        <style jsx>{`
+          @keyframes fadein {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+          .animate-fadein {
+            animation: fadein 0.7s;
+          }
+        `}</style>
       </div>
     </div>
   );
