@@ -2,6 +2,43 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
 
+// List of apostrophe-like characters to treat as equivalent
+const APOSTROPHE_EQUIVALENTS = [
+  "'", // ASCII apostrophe
+  "’", // U+2019 RIGHT SINGLE QUOTATION MARK
+  "‘", // U+2018 LEFT SINGLE QUOTATION MARK
+  "‛", // U+201B SINGLE HIGH-REVERSED-9 QUOTATION MARK
+  "ʼ", // U+02BC MODIFIER LETTER APOSTROPHE
+  "`", // grave accent (sometimes used)
+  "ʹ", // U+02B9 MODIFIER LETTER PRIME
+  "＇", // U+FF07 FULLWIDTH APOSTROPHE
+];
+
+// Helper to check if two chars are equivalent, especially for apostrophes
+function charsEquivalent(a: string, b: string) {
+  if (a === b) return true;
+  if (
+    APOSTROPHE_EQUIVALENTS.includes(a) &&
+    APOSTROPHE_EQUIVALENTS.includes(b)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+// Helper to normalize a string by replacing all apostrophe-like chars with ASCII apostrophe
+function normalizeApostrophes(str: string) {
+  let result = "";
+  for (const c of str) {
+    if (APOSTROPHE_EQUIVALENTS.includes(c)) {
+      result += "'";
+    } else {
+      result += c;
+    }
+  }
+  return result;
+}
+
 function calculateWPM(charsTyped: number, elapsedSeconds: number) {
   if (elapsedSeconds === 0) return 0;
   // 1 word = 5 chars
@@ -104,7 +141,10 @@ export default function TypingSpeedCounter() {
       setStartTime(now);
       setTimer(0);
     }
-    if (userInput === testText) {
+    // Use normalized strings for completion check
+    if (
+      normalizeApostrophes(userInput) === normalizeApostrophes(testText)
+    ) {
       if (!endTime) {
         const finishedTime = Date.now();
         setEndTime(finishedTime);
@@ -148,6 +188,11 @@ export default function TypingSpeedCounter() {
     inputRef.current?.focus();
   }
 
+  // Prevent pasting into the textarea
+  function handlePaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+    e.preventDefault();
+  }
+
   let elapsedSeconds = 0;
   if (startTime && endTime) {
     elapsedSeconds = (endTime - startTime) / 1000;
@@ -180,7 +225,7 @@ export default function TypingSpeedCounter() {
         {chars.map((char, idx) => {
           let className = "";
           if (idx < inputChars.length) {
-            if (inputChars[idx] === char) {
+            if (charsEquivalent(inputChars[idx], char)) {
               className = "bg-transparent";
             } else {
               className = "bg-red-300 text-black";
@@ -227,6 +272,7 @@ export default function TypingSpeedCounter() {
           className="w-full p-2 border rounded font-mono mb-2 resize-none break-words"
           value={userInput}
           onChange={handleChange}
+          onPaste={handlePaste}
           disabled={isFinished || !testText || testText === "Failed to load sentence."}
           placeholder="Start typing here..."
           autoFocus
