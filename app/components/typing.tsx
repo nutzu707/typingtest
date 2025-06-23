@@ -2,7 +2,6 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
 
-// List of apostrophe-like characters to treat as equivalent
 const APOSTROPHE_EQUIVALENTS = [
   "'", // ASCII apostrophe
   "’", // U+2019 RIGHT SINGLE QUOTATION MARK
@@ -56,13 +55,49 @@ function getGlobalResults() {
   }
 }
 
-function saveGlobalResult(result: { wpm: number; time: number; date: string }) {
+// Only store wpm and date (not time)
+function saveGlobalResult(result: { wpm: number; date: string }) {
   if (typeof window === "undefined") return;
   try {
     const prev = getGlobalResults();
     prev.push(result);
     localStorage.setItem("typingTestResults", JSON.stringify(prev));
   } catch {}
+}
+
+// Helper to format "time ago" string
+function timeAgo(dateString: string): string {
+  const now = new Date();
+  const then = new Date(dateString);
+  const seconds = Math.floor((now.getTime() - then.getTime()) / 1000);
+
+  if (isNaN(seconds) || seconds < 0) return "just now";
+
+  if (seconds < 60) {
+    return `${seconds} second${seconds === 1 ? "" : "s"} ago`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) {
+    return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  }
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  }
+  const days = Math.floor(hours / 24);
+  if (days < 7) {
+    return `${days} day${days === 1 ? "" : "s"} ago`;
+  }
+  const weeks = Math.floor(days / 7);
+  if (weeks < 4) {
+    return `${weeks} week${weeks === 1 ? "" : "s"} ago`;
+  }
+  const months = Math.floor(days / 30);
+  if (months < 12) {
+    return `${months} month${months === 1 ? "" : "s"} ago`;
+  }
+  const years = Math.floor(days / 365);
+  return `${years} year${years === 1 ? "" : "s"} ago`;
 }
 
 export default function TypingSpeedCounter() {
@@ -75,11 +110,12 @@ export default function TypingSpeedCounter() {
   const [timer, setTimer] = useState<number>(0);
   //eslint-disable-next-line
   const [results, setResults] = useState<
-    { wpm: number; time: number; date: string }[]
+    { wpm: number; date: string }[]
   >([]);
   const [globalResults, setGlobalResults] = useState<
-    { wpm: number; time: number; date: string }[]
+    { wpm: number; date: string }[]
   >([]);
+  const [showAllResults, setShowAllResults] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Timer effect: updates every 100ms while typing
@@ -155,7 +191,6 @@ export default function TypingSpeedCounter() {
         const wpm = calculateWPM(userInput.length, elapsed);
         const result = {
           wpm,
-          time: elapsed,
           date: new Date().toISOString(),
         };
         setResults((prev) => [...prev, result]);
@@ -212,8 +247,9 @@ export default function TypingSpeedCounter() {
       ? Math.round(globalWPMs.reduce((a, b) => a + b, 0) / globalWPMs.length)
       : null;
 
-  // Show up to 5 previous results (most recent first)
-  const recentResults = [...globalResults].reverse().slice(0, 5);
+  // Show up to 5 previous results (most recent first) unless showAllResults is true
+  const reversedResults = [...globalResults].reverse();
+  const recentResults = showAllResults ? reversedResults : reversedResults.slice(0, 5);
 
   // --- Highlight logic for testText ---
   function renderTestTextWithHighlights() {
@@ -250,9 +286,9 @@ export default function TypingSpeedCounter() {
   }
 
   return (
-    <div className="max-w-xl mx-auto">
+    <div className="max-w-xl mx-auto pt-10 pb-10">
 
-      <div className="w-full mt-10 p-6 border rounded">
+      <div className="w-full p-6 border rounded">
         <h2 className="text-xl font-bold mb-4">Typing Test</h2>
         <div className="flex items-center justify-between mb-2">
           <span className="text-gray-700 font-mono">
@@ -286,7 +322,7 @@ export default function TypingSpeedCounter() {
               Finished! Your WPM: {wpm}
             </div>
             <button
-              className="px-4 py-2 bg-black  text-white rounded"
+              className="px-4 py-2 bg-black cursor-pointer text-white rounded"
               onClick={handleRestart}
             >
               Restart
@@ -300,17 +336,35 @@ export default function TypingSpeedCounter() {
         {recentResults.length === 0 ? (
           <div className="text-gray-500 text-sm">No previous results yet.</div>
         ) : (
-          <ul className="text-sm font-mono space-y-1 mb-2">
-            {recentResults.map((r, idx) => (
-              <li key={r.date + idx}>
-                <span className="font-bold">{r.wpm} WPM</span>
-                {" "}
-                <span className="text-gray-600">
-                  ({r.time.toFixed(1)}s, {new Date(r.date).toLocaleString()})
-                </span>
-              </li>
-            ))}
-          </ul>
+          <>
+            <ul className="text-sm font-mono space-y-1 mb-2">
+              {recentResults.map((r, idx) => (
+                <li key={r.date + idx}>
+                  <span className="font-bold">{r.wpm} WPM</span>
+                  {" "}
+                  <span className="text-gray-600">
+                    ({timeAgo(r.date)})
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {globalResults.length > 5 && !showAllResults && (
+              <button
+                className="text-sm underline cursor-pointer"
+                onClick={() => setShowAllResults(true)}
+              >
+                show more
+              </button>
+            )}
+            {showAllResults && globalResults.length > 5 && (
+              <button
+                className="text-sm underline cursor-pointer"
+                onClick={() => setShowAllResults(false)}
+              >
+                show less
+              </button>
+            )}
+          </>
         )}
         <div className="mt-2 font-mono">
           Global average:{" "}
