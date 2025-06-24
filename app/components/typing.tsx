@@ -476,7 +476,7 @@ export default function TypingSpeedCounter() {
     <div className="max-w-xl min-w-xl mx-auto pb-10 font-mono">
       <div className="min-w-full px-4 py-6 sm:px-8 sm:py-8 border rounded-lg shadow-lg bg-white/40 transition-all duration-300 hover:shadow-xl animate-fadein-card">
         <h2 className="uppercase text-4xl font-bold mb-8 mt-4 text-center w-full bg-gradient-to-r from-blue-600 to-purple-600 inline-block text-transparent bg-clip-text animate-float tracking-wide drop-shadow-[0_2px_2px_rgba(0,0,0,0.1)]">
-          Speed Typing Test
+          Typing Speed Test
         </h2>
         <div className="flex items-center justify-between mb-2">
           <span className="font-mono font-bold flex items-center">
