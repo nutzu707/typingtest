@@ -1,6 +1,6 @@
 
 "use client";
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { RefreshCwIcon } from "lucide-react";
 
 const APOSTROPHE_EQUIVALENTS = [
@@ -77,13 +77,6 @@ function timeAgo(dateString: string): string {
   return `${years} year${years === 1 ? "" : "s"} ago`;
 }
 
-function formatDateTime(dateString: string): string {
-  // Returns e.g. "2024-06-10 14:23"
-  const d = new Date(dateString);
-  if (isNaN(d.getTime())) return "";
-  const pad = (n: number) => n.toString().padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 // --- Accuracy calculation helpers ---
 // This version tracks mistakes as a cumulative count that never decreases, even if the user corrects their input.
@@ -146,7 +139,6 @@ export default function TypingSpeedCounter() {
     return () => {
       window.removeEventListener("keydown", handleGlobalKeydown, { capture: true });
     };
-    // eslint-disable-next-line
   }, [isFinished, testText]);
 
   // Timer effect: updates every 100ms while typing
@@ -275,7 +267,6 @@ export default function TypingSpeedCounter() {
         setGlobalResults(getGlobalResults());
       }
     }
-    // eslint-disable-next-line
   }, [userInput, startTime, endTime, testText, isFinished, mistakeCount]);
 
   function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
@@ -359,7 +350,7 @@ export default function TypingSpeedCounter() {
       : null;
 
   // Sorting logic for results
-  let sortedResults = [...globalResults];
+  const sortedResults = [...globalResults];
   if (sortBy === "latest") {
     sortedResults.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   } else if (sortBy === "wpm") {
@@ -480,11 +471,6 @@ export default function TypingSpeedCounter() {
       }
     });
   }
-
-  // --- Accuracy calculation for current test ---
-  const totalChars = testText.length;
-  const currentMistakes = mistakeCount;
-  const currentAccuracy = totalChars > 0 ? Math.max(0, Math.round(100 * (1 - currentMistakes / totalChars))) : 100;
 
   return (
     <div className="max-w-xl min-w-xl mx-auto pb-10 font-mono">
