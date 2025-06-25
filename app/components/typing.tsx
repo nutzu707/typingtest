@@ -95,7 +95,11 @@ export default function TypingSpeedCounter() {
   const [globalResults, setGlobalResults] = useState<
     { wpm: number; date: string; accuracy: number }[]
   >([]);
-  const [showAllResults, setShowAllResults] = useState(false);
+  // --- Show more/less logic ---
+  const INITIAL_RESULTS_COUNT = 5;
+  const SHOW_MORE_STEP = 50;
+  const [resultsToShow, setResultsToShow] = useState(INITIAL_RESULTS_COUNT);
+  const [showMoreClicked, setShowMoreClicked] = useState(false);
   const [animateWPM, setAnimateWPM] = useState(false);
   const [sortBy, setSortBy] = useState<"latest" | "wpm">("latest");
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -199,12 +203,18 @@ export default function TypingSpeedCounter() {
       }
     }, 0);
     return () => clearTimeout(timeout);
-  }, [testText]);
+  }, [testText]); 
 
   // Load global results from localStorage on mount
   useEffect(() => {
     setGlobalResults(getGlobalResults());
   }, []);
+
+  // Reset resultsToShow if results change (e.g. after delete all)
+  useEffect(() => {
+    setResultsToShow(INITIAL_RESULTS_COUNT);
+    setShowMoreClicked(false);
+  }, [globalResults.length]);
 
   // --- Track mistakes as user types ---
   useEffect(() => {
@@ -305,7 +315,8 @@ export default function TypingSpeedCounter() {
     if (typeof window !== "undefined") {
       localStorage.removeItem("typingTestResults");
       setGlobalResults([]);
-      setShowAllResults(false);
+      setResultsToShow(INITIAL_RESULTS_COUNT);
+      setShowMoreClicked(false);
     }
   }
 
@@ -320,7 +331,6 @@ export default function TypingSpeedCounter() {
     ? calculateWPM(userInput.length, elapsedSeconds)
     : null;
 
-  // --- Averages calculation ---
   const globalWPMs = globalResults.map((r) => r.wpm);
   const globalAccs = globalResults.map((r) => r.accuracy);
 
@@ -356,7 +366,8 @@ export default function TypingSpeedCounter() {
   } else if (sortBy === "wpm") {
     sortedResults.sort((a, b) => b.wpm - a.wpm || new Date(b.date).getTime() - new Date(a.date).getTime());
   }
-  const recentResults = showAllResults ? sortedResults : sortedResults.slice(0, 5);
+  // Show only resultsToShow count
+  const recentResults = sortedResults.slice(0, resultsToShow);
 
   // --- Highlight logic for testText ---
   function renderTestTextWithHighlights() {
@@ -473,13 +484,13 @@ export default function TypingSpeedCounter() {
   }
 
   return (
-    <div className="max-w-xl min-w-xl mx-auto pb-10 font-mono">
-      <div className="min-w-full px-4 py-6 sm:px-8 sm:py-8 border rounded-lg shadow-lg bg-white/40 transition-all duration-300 hover:shadow-xl animate-fadein-card">
-        <h2 className="uppercase text-4xl font-bold mb-8 mt-4 text-center w-full bg-gradient-to-r from-blue-600 to-purple-600 inline-block text-transparent bg-clip-text animate-float tracking-wide drop-shadow-[0_2px_2px_rgba(0,0,0,0.1)]">
+    <div className="max-w-[720px] min-w-[720px] mx-auto pb-14 font-mono">
+      <div className="min-w-full p-10 py-10 border rounded-lg shadow-lg bg-white/30 transition-all duration-300 hover:shadow-xl animate-fadein-card">
+        <h2 className="uppercase text-5xl font-bold mb-10 mt-4 text-center w-full bg-gradient-to-r from-blue-600 to-purple-600 inline-block text-transparent bg-clip-text animate-float tracking-wide drop-shadow-[0_2px_2px_rgba(0,0,0,0.1)]">
           Typing Speed Test
         </h2>
         <div className="flex items-center justify-between mb-2">
-          <span className="font-mono font-bold flex items-center">
+          <span className="font-mono font-bold flex items-center text-xl">
             <span
               className={`inline-block w-2 h-2 mr-3 rounded-full animate-pulse ${
                 isTyping ? "bg-green-500" : "bg-red-500"
@@ -497,12 +508,12 @@ export default function TypingSpeedCounter() {
             </span>
           </span>
         </div>
-        <p className="mb-4 font-mono border px-3 py-2 rounded min-h-[3rem] transition-all duration-300 shadow-inner animate-fadein-slow">
+        <p className="mb-4 font-mono text-xl border px-3 py-2 rounded min-h-[3rem] transition-all duration-300 shadow-inner animate-fadein-slow">
           {renderTestTextWithHighlights()}
         </p>
         <textarea
           ref={inputRef}
-          className="w-full px-3 py-2 border rounded font-mono mb-4 resize-none break-words transition-all duration-200 animate-fadein-slow"
+          className="w-full px-3 text-xl py-2 border rounded font-mono mb-4 resize-none break-words transition-all duration-200 animate-fadein-slow"
           value={userInput}
           onChange={handleChange}
           onPaste={handlePaste}
@@ -514,12 +525,12 @@ export default function TypingSpeedCounter() {
           id="typing-textarea"
         />
         {/* Always show the restart button */}
-        <div className="flex h-10 flex-row items-center animate-fadein">
+        <div className="flex h-14 flex-row items-center animate-fadein">
         {isFinished && (
           <div className="animate-fadein">
             <div
               className={
-                "font-bold text-lg border rounded-lg px-3 py-2 border-blue-200 transition-all duration-500 " +
+                "font-bold text-2xl border rounded-lg px-4 py-3 border-blue-200 transition-all duration-500 " +
                 (animateWPM ? "animate-pop" : "")
               }
             >
@@ -577,11 +588,11 @@ export default function TypingSpeedCounter() {
           </div>
         )}
           <button
-            className="px-4 py-2 ml-auto h-10 cursor-pointer rounded-lg shadow font-semibold bg-blue-700 text-white transition-all duration-200 hover:bg-blue-800 hover:scale-105 active:scale-95 animate-bounce-in focus:outline-none focus:ring-2 focus:ring-blue-400"
+            className="px-4 py-2 ml-auto h-12 cursor-pointer text-xl rounded-lg shadow font-semibold bg-blue-700 text-white transition-all duration-200 hover:bg-blue-800 hover:scale-105 active:scale-95 animate-bounce-in focus:outline-none focus:ring-2 focus:ring-blue-400"
             onClick={handleRestart}
             type="button"
           >
-            <span className="inline-flex items-center gap-2">
+            <span className="inline-flex items-center gap-3">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <RefreshCwIcon className="w-4 h-4" />
               </svg>
@@ -592,16 +603,16 @@ export default function TypingSpeedCounter() {
         
       </div>
 
-      <div className="w-full mt-6 px-4 py-6 sm:px-8 sm:py-8 border rounded-lg shadow-lg bg-white/40 transition-all duration-300 hover:shadow-xl animate-fadein-card">
+      <div className="w-full mt-6 p-10 border rounded-lg shadow-lg bg-white/40 transition-all duration-300 hover:shadow-xl animate-fadein-card">
         {/* Stats Card */}
         <div className="flex flex-col sm:flex-row gap-4 items-center mb-4">
-          <div className="flex w-full border border-blue-200 rounded-lg px-3 py-4 items-center justify-between animate-fadein-slow">
+          <div className="flex w-full border border-blue-200 rounded-lg px-4 py-4 items-center justify-between animate-fadein-slow">
             <div className="flex flex-col">
-              <div className="text-[10px] uppercase tracking-wider text-blue-700 font-medium mb-2">All Time Avg</div>
-              <div className="text-blue-700 text-sm font-medium">WPM <span className="text-gray-400">/</span> <span className="text-green-700">ACC</span></div>
+              <div className="text-sm uppercase tracking-wider text-blue-700 font-medium mb-2">All Time Avg</div>
+              <div className="text-blue-700 text-lg font-medium">WPM <span className="text-gray-400">/</span> <span className="text-green-700">ACC</span></div>
             </div>
             <div className="flex flex-col items-end gap-1">
-              <div className="text-blue-700 text-2xl font-bold leading-tight animate-avg-pop">
+              <div className="text-blue-700 text-3xl font-bold leading-tight animate-avg-pop">
                 <span className="text-blue-700">{globalAvgWPM !== null ? globalAvgWPM : "--"}</span>
                 <span className="text-gray-400">/</span>
                 <span className="text-green-700">
@@ -613,11 +624,11 @@ export default function TypingSpeedCounter() {
 
           <div className="w-full border border-yellow-200 rounded-lg px-3 py-4 flex items-center justify-between animate-fadein-slow">
             <div className="flex flex-col">
-              <div className="text-[10px] uppercase tracking-wider text-yellow-700 font-medium mb-2">Last 10 Avg</div>
-              <div className="text-blue-700 text-sm font-medium">WPM <span className="text-gray-400">/</span> <span className="text-green-700">ACC</span></div>
+              <div className="text-sm uppercase tracking-wider text-yellow-700 font-medium mb-2">Last 10 Avg</div>
+              <div className="text-blue-700 text-lg font-medium">WPM <span className="text-gray-400">/</span> <span className="text-green-700">ACC</span></div>
             </div>
             <div className="flex flex-col items-end gap-1">
-              <div className="text-blue-700 text-2xl font-bold leading-tight animate-avg-pop">
+              <div className="text-blue-700 text-3xl font-bold leading-tight animate-avg-pop">
                 <span className="text-blue-700">{last10AvgWPM !== null ? last10AvgWPM : "--"}</span>
                 <span className="text-gray-400">/</span>
                 <span className="text-green-700">
@@ -630,10 +641,10 @@ export default function TypingSpeedCounter() {
 
         {/* End Stats Card */}
         <div className="flex items-center justify-between mb-2">
-          <h2 className="font-bold tracking-tight text-lg animate-fadein">Previous Results</h2>
+          <h2 className="font-bold tracking-tight text-xl animate-fadein">Previous Results</h2>
           <div className="flex gap-1">
             <button
-              className={`px-2 py-0.5 rounded text-xs font-bold border transition-all duration-150 ${
+              className={`px-2 py-0.5 rounded text-sm font-bold border transition-all duration-150 ${
                 sortBy === "latest"
                   ? "bg-blue-700 text-white border-blue-700"
                   : "bg-transparent text-blue-700 border-blue-700 hover:bg-blue-50"
@@ -645,7 +656,7 @@ export default function TypingSpeedCounter() {
               Time
             </button>
             <button
-              className={`px-2 py-0.5 rounded text-xs font-bold border transition-all duration-150 ${
+              className={`px-2 py-0.5 rounded text-sm font-bold border transition-all duration-150 ${
                 sortBy === "wpm"
                   ? "bg-blue-700 text-white border-blue-700"
                   : "bg-transparent text-blue-700 border-blue-700 hover:bg-blue-50"
@@ -663,7 +674,7 @@ export default function TypingSpeedCounter() {
         ) : (
           <>
             <div className="overflow-x-auto animate-fadein-slow overflow-hidden">
-              <table className="min-w-full text-sm font-mono border-collapse">
+              <table className="min-w-full text-md font-mono border-collapse">
                 <thead>
                   <tr className="">
                     <th className="w-10 min-w-10 text-left font-bold">#</th>
@@ -676,7 +687,6 @@ export default function TypingSpeedCounter() {
                 <tbody>
                   {recentResults.map((r, idx) => {
                     const d = new Date(r.date);
-                    // Combine date and time in one string
                     const dateTimeStr = isNaN(d.getTime())
                       ? ""
                       : `${d.getFullYear()}-${(d.getMonth() + 1)
@@ -691,25 +701,32 @@ export default function TypingSpeedCounter() {
                           .getMinutes()
                           .toString()
                           .padStart(2, "0")}`;
-                    // Determine if this is the latest in all globalResults
                     const isLatest =
                       latestGlobalResult &&
                       r.wpm === latestGlobalResult.wpm &&
                       r.date === latestGlobalResult.date;
-                    // Determine if this is the fastest in all globalResults
                     const isFastest =
                       fastestGlobalResult &&
                       r.wpm === fastestGlobalResult.wpm &&
                       r.date === fastestGlobalResult.date;
-                    // If both, show both dots (green for fastest, blue for latest)
+                    // Animation: only animate one-by-one for the first 5, else no delay or much faster
+                    let rowClass = "transition-all duration-200 hover:bg-blue-50 animate-row-fadein";
+                    let style: React.CSSProperties = {};
+                    if (showMoreClicked && idx >= INITIAL_RESULTS_COUNT) {
+                      // Remove animation delay for "show more" rows, and make animation faster
+                      rowClass = "transition-all duration-100 hover:bg-blue-50 animate-row-fadein-fast";
+                      style = {};
+                    } else if (idx < INITIAL_RESULTS_COUNT) {
+                      style = {
+                        animationDelay: `${idx * 0.05}s`,
+                        animationFillMode: "backwards"
+                      };
+                    }
                     return (
                       <tr
                         key={r.date + idx}
-                        className="transition-all duration-200 hover:bg-blue-50 animate-row-fadein"
-                        style={{
-                          animationDelay: `${idx * 0.05}s`,
-                          animationFillMode: "backwards"
-                        }}
+                        className={rowClass}
+                        style={style}
                       >
                         <td className="py-1">{idx + 1}</td>
                         <td className="py-1 font-bold text-blue-700">
@@ -718,7 +735,7 @@ export default function TypingSpeedCounter() {
                               <span
                                 title="Fastest"
                                 className="inline-block w-2 h-2 rounded-full bg-green-500 mr-1 animate-dot-pop"
-                                style={{ verticalAlign: "middle" }}
+                                               style={{ verticalAlign: "middle" }}
                               ></span>
                             )}
                             {isLatest && (
@@ -743,18 +760,26 @@ export default function TypingSpeedCounter() {
               </table>
             </div>
             <div className="flex items-center gap-2 mt-2 animate-fadein">
-              {globalResults.length > 5 && !showAllResults && (
+              {globalResults.length > resultsToShow && (
                 <button
-                  className="text-sm underline cursor-pointer pt-2 text-blue-700 hover:text-blue-900 transition-all duration-200 animate-bounce-in"
-                  onClick={() => setShowAllResults(true)}
+                  className="text-sm underline cursor-pointer mr-2 pt-2 text-blue-700 hover:text-blue-900 transition-all duration-200 animate-bounce-in"
+                  onClick={() => {
+                    setResultsToShow((prev) => {
+                      setShowMoreClicked(true);
+                      return Math.min(prev + SHOW_MORE_STEP, globalResults.length);
+                    });
+                  }}
                 >
                   show more
                 </button>
               )}
-              {showAllResults && globalResults.length > 5 && (
+              {resultsToShow > INITIAL_RESULTS_COUNT && (
                 <button
-                  className="text-sm underline cursor-pointer px-2 pt-2 text-blue-700 hover:text-blue-900 transition-all duration-200 animate-bounce-in"
-                  onClick={() => setShowAllResults(false)}
+                  className="text-sm underline cursor-pointer pt-2 text-blue-700 hover:text-blue-900 transition-all duration-200 animate-bounce-in"
+                  onClick={() => {
+                    setResultsToShow(INITIAL_RESULTS_COUNT);
+                    setShowMoreClicked(false);
+                  }}
                 >
                   show less
                 </button>
@@ -772,14 +797,14 @@ export default function TypingSpeedCounter() {
             {/* Modal for delete all confirmation */}
             {showDeleteModal && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 animate-modal-fadein">
-                <div className="bg-white rounded-lg shadow-lg p-6 max-w-xs w-full border animate-modal-pop">
-                  <div className="font-bold text-lg mb-2 text-center text-red-700">Delete All Results?</div>
-                  <div className="text-gray-700 mb-4 text-center">
+                <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full border animate-modal-pop">
+                  <div className="font-bold text-2xl mb-2 text-center text-red-700">Delete All Results?</div>
+                  <div className="text-gray-700 mb-4 text-lg text-center">
                     Are you sure you want to delete <b>all</b> typing results? This cannot be undone.
                   </div>
                   <div className="flex justify-center gap-4">
                     <button
-                      className="px-4 py-1 rounded bg-red-700 text-white font-bold shadow hover:bg-red-800 transition-all duration-150 animate-bounce-in"
+                      className="px-4 py-1 rounded text-xl cursor-pointer bg-red-700 text-white font-bold shadow hover:bg-red-800 transition-all duration-150 animate-bounce-in"
                       onClick={() => {
                         handleDeleteAllResults();
                         setShowDeleteModal(false);
@@ -788,7 +813,7 @@ export default function TypingSpeedCounter() {
                       Delete All
                     </button>
                     <button
-                      className="px-4 py-1 rounded bg-gray-200 text-gray-800 font-bold shadow hover:bg-gray-300 transition-all duration-150 animate-bounce-in"
+                      className="px-4 py-1 rounded text-xl cursor-pointer bg-gray-200 text-gray-800 font-bold shadow hover:bg-gray-300 transition-all duration-150 animate-bounce-in"
                       onClick={() => setShowDeleteModal(false)}
                     >
                       Cancel
@@ -853,6 +878,13 @@ export default function TypingSpeedCounter() {
           .animate-row-fadein {
             animation: rowFadein 0.5s;
           }
+          @keyframes rowFadeinFast {
+            from { opacity: 0; transform: translateY(5px);}
+            to { opacity: 1; transform: translateY(0);}
+          }
+          .animate-row-fadein-fast {
+            animation: rowFadeinFast 0.12s;
+          }
           @keyframes dotPop {
             0% { transform: scale(0.7);}
             60% { transform: scale(1.3);}
@@ -878,6 +910,8 @@ export default function TypingSpeedCounter() {
           }
         `}</style>
       </div>
+      
+
     </div>
   );
 }

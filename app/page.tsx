@@ -43,7 +43,7 @@ export default function Home() {
   return (
     <div
       ref={bgRef}
-      className="w-full min-h-screen flex pt-24 justify-center transition-colors duration-1000"
+      className="w-full min-h-screen flex pt-32 justify-center transition-colors duration-1000"
     >
       <TypingSpeedCounter />
     </div>

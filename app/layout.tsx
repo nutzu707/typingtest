@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Typing Test",
+  title: "Typing Speed Test",
 };
 
 export default function RootLayout({
